@@ -24,6 +24,8 @@ load_pkg("ggplot2")
 load_pkg("tidyr")
 load_pkg("janitor")
 load_pkg("here")
+load_pkg("ggpubr")
+load_pkg("knitr")
 
 
 ```
@@ -75,6 +77,8 @@ data <- data %>%
 
 summary(data)
 
+
+
 ```
 
 ```{r}
@@ -84,5 +88,403 @@ data %>% count(study_species) %>%
   geom_col() +
   labs(title="Count by Species", x="Species", y="Count")
 
+```
+Good spread! :-)
+
+## assessing condions
+```{r}
+unique(data$condition)
+
+```
+This is weird, am assuming that the "I" is in there accidentally, instead of "|". Changing this requires reformatting to character again, changin the letter and then making it factor again.
+
+```{r}
+
+data$condition <- as.character(data$condition)
+data$condition <- gsub("I", "|", data$condition, fixed = TRUE)
+data$condition <- factor(data$condition)
+
+```
+
+ok, better, now check how many we have in each condition
+```{r}
+table(data$condition)
+```
+Who is missing?
+```{r}
+
+df <- data %>%
+  mutate(unit_id = paste(researcher_name, study_species, individual_id, trial_day, sep = " | "))
+
+
+keys_10    <- df %>% filter(condition == "10")    %>% distinct(unit_id, researcher_name, study_species)
+keys_10_1  <- df %>% filter(condition == "10|1")  %>% distinct(unit_id)
+
+missing_10_1 <- keys_10 %>%
+  filter(!unit_id %in% keys_10_1$unit_id)
+# great. issues with IDs when copying over!! in SZ data
+
+
+keys_30     <- df %>% filter(condition == "30")    %>% distinct(unit_id, researcher_name, study_species)
+keys_30_1   <- df %>% filter(condition == "30|1")  %>% distinct(unit_id)
+keys_30f10  <- df %>% filter(condition == "30f10") %>% distinct(unit_id)
+
+missing_30_1 <- keys_30 %>%
+  filter(!unit_id %in% keys_30_1$unit_id)
+
+missing_30f10 <- keys_30 %>%
+  filter(!unit_id %in% keys_30f10$unit_id)
+
+
+
+summary_missing <- full_join(
+  missing_10_1  %>% count(researcher_name, study_species, name = "missing_10_1"),
+  missing_30_1  %>% count(researcher_name, study_species, name = "missing_30_1"),
+  by = c("researcher_name","study_species")
+) %>%
+  full_join(
+    missing_30f10 %>% count(researcher_name, study_species, name = "missing_30f10"),
+    by = c("researcher_name","study_species")
+  ) %>%
+  mutate(across(starts_with("missing_"), ~replace_na(.x, 0L))) %>%
+  arrange(desc(missing_30f10 + missing_30_1 + missing_10_1))
+
+summary_missing
+
+
+
+```
+
+what do we have?
+```{r}
+
+counts_long <- as.data.frame(with(data, table(researcher_name, study_species, condition)))
+counts_long <- subset(counts_long, Freq > 0)
+counts_long <- counts_long[order(counts_long$researcher_name), ]
+kable(counts_long)
+
+```
+
+```{r}
+
+with(data, table(condition, trial_day))
+     
+   
+```
+
+regardless...
+
+let's have a quick look at conditions (last min 10 vs 30)
+
+## Last Minute
+```{r}
+sub_last <- subset(data, condition %in% c("10|1", "30|1"))
+
+ggplot(sub_last, aes(x = trial_day, y = timespent_active, colour = condition, fill = condition)) +
+  geom_violin(
+    position = position_dodge(width = 0.8),
+    alpha = 0.25,
+    trim = TRUE
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8),
+    alpha = 0.35
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+    alpha = 0.45,
+    size = 1.2
+  ) +
+  labs(x = "Trial day", y = "Time spent active (s)", colour = "Condition", fill = "Condition") +
+  theme_minimal(base_size = 13)
+```
+
+### split by species
+```{r}
+ggplot(sub_last, aes(x = trial_day, y = timespent_active, colour = condition)) +
+  geom_line(
+    aes(group = interaction(individual_id, condition)),
+    alpha = 0.12,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_violin(
+    aes(fill = condition),
+    position = position_dodge(width = 0.8),
+    alpha = 0.2,
+    trim = TRUE
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8),
+    alpha = 0.3
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+    alpha = 0.4,
+    size = 1.1
+  ) +
+  facet_wrap(~study_species) +
+  labs(x = "Trial day", y = "Time spent active (s)", colour = "Condition", fill = "Condition") +
+  theme_minimal(base_size = 13)
+
+```
+
+ok, Danio my fault, need to fix the data!!
+
+## 10 mins
+
+```{r}
+sub10 <- subset(data, condition %in% c("10", "30f10"))
+
+ggplot(sub10, aes(x = trial_day, y = timespent_active, colour = condition)) +
+  geom_line(
+    aes(group = interaction(individual_id, condition)),
+    alpha = 0.12,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_violin(
+    aes(fill = condition),
+    position = position_dodge(width = 0.8),
+    alpha = 0.2,
+    trim = TRUE
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8),
+    alpha = 0.3
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+    alpha = 0.4,
+    size = 1.1
+  ) +
+  facet_wrap(~study_species) +
+  labs(x = "Trial day", y = "Time spent active (s)", colour = "Condition", fill = "Condition") +
+  theme_minimal(base_size = 13)
+
+```
+
+
+### Different variables?
+LATENCY
+```{r}
+ggplot(sub10, aes(x = trial_day, y = latency_swim_freely, colour = condition)) +
+  geom_line(
+    aes(group = interaction(individual_id, condition)),
+    alpha = 0.12,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_violin(
+    aes(fill = condition),
+    position = position_dodge(width = 0.8),
+    alpha = 0.2,
+    trim = TRUE
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8),
+    alpha = 0.3
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+    alpha = 0.4,
+    size = 1.1
+  ) +
+  facet_wrap(~study_species) +
+  labs(x = "Trial day", y = "latency to swim (s)", colour = "Condition", fill = "Condition") +
+ 
+  theme_minimal(base_size = 13) + scale_y_log10()
+```
+
+CONTACT WITH SIDES or BOTTOM (called thigmotaxis here)
+```{r}
+ggplot(sub10, aes(x = trial_day, y =timespent_contact, colour = condition)) +
+  geom_line(
+    aes(group = interaction(individual_id, condition)),
+    alpha = 0.12,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_violin(
+    aes(fill = condition),
+    position = position_dodge(width = 0.8),
+    alpha = 0.2,
+    trim = TRUE
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8),
+    alpha = 0.3
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+    alpha = 0.4,
+    size = 1.1
+  ) +
+  facet_wrap(~study_species) +
+  labs(x = "Trial day", y = "thigmotaxis (s)", colour = "Condition", fill = "Condition") +
+  theme_minimal(base_size = 13)
+```
+ggplot(sub10, aes(x = trial_day, y = timespent_active, colour = condition)) +
+  geom_line(
+    aes(group = interaction(individual_id, condition)),
+    alpha = 0.12,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_violin(
+    aes(fill = condition),
+    position = position_dodge(width = 0.8),
+    alpha = 0.2,
+    trim = TRUE
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8),
+    alpha = 0.3
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+    alpha = 0.4,
+    size = 1.1
+  ) +
+  facet_wrap(~study_species) +
+  labs(x = "Trial day", y = "Time spent active (s)", colour = "Condition", fill = "Condition") +
+  theme_minimal(base_size = 13)
+
+```
+
+
+##### Different variables?
+```{r} 
+
+ggplot(sub10, aes(x = trial_day, y = latency_swim_freely, colour = condition)) +
+  geom_line(
+    aes(group = interaction(individual_id, condition)),
+    alpha = 0.12,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_violin(
+    aes(fill = condition),
+    position = position_dodge(width = 0.8),
+    alpha = 0.2,
+    trim = TRUE
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8),
+    alpha = 0.3
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+    alpha = 0.4,
+    size = 1.1
+  ) +
+  facet_wrap(~study_species) +
+  labs(x = "Trial day", y = "latency to swim (s)", colour = "Condition", fill = "Condition") +
+ 
+  theme_minimal(base_size = 13) + scale_y_log10()
+  
+```
+
+
+STARTLE
+
+```{r}
+
+ggplot(sub10, aes(x = trial_day, y =nb_dart_startle , colour = condition)) +
+  geom_line(
+    aes(group = interaction(individual_id, condition)),
+    alpha = 0.12,
+    position = position_dodge(width = 0.8)
+  ) +
+  geom_violin(
+    aes(fill = condition),
+    position = position_dodge(width = 0.8),
+    alpha = 0.2,
+    trim = TRUE
+  ) +
+  geom_boxplot(
+    width = 0.15,
+    outlier.shape = NA,
+    position = position_dodge(width = 0.8),
+    alpha = 0.3
+  ) +
+  geom_point(
+    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
+    alpha = 0.4,
+    size = 1.1
+  ) +
+  facet_wrap(~study_species) +
+  labs(x = "Trial day", y = "number startle/darts", colour = "Condition", fill = "Condition") +
+  theme_minimal(base_size = 13)
+  
+```
+
+
+## Novel Object Tests
+
+### Latency approach
+```{r}
+
+novO_data <- data %>%
+  dplyr::filter(trial_day == "4")
+
+
+ggplot(novO_data, aes(x = condition, y = latency_approach_no, colour = condition)) +
+  geom_violin(fill = NA, trim = TRUE) +
+  geom_boxplot(width = 0.15, outlier.shape = NA) +
+  geom_point(position = position_jitter(width = 0.12), alpha = 0.5) +
+  scale_y_log10() +
+  facet_wrap(~study_species) +
+  labs(
+    x = "Acclimation condition",
+    y = "Latency to approach novel object (log scale)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+
+```
+
+### Latency touch
+```{r}
+
+ggplot(novO_data, aes(x = condition, y = latency_touch_no, colour = condition)) +
+  geom_violin(fill = NA, trim = TRUE) +
+  geom_boxplot(width = 0.15, outlier.shape = NA) +
+  geom_point(position = position_jitter(width = 0.12), alpha = 0.5) +
+  scale_y_log10() +
+  facet_wrap(~study_species) +
+  labs(
+    x = "Acclimation condition",
+    y = "Latency to touch novel object (log scale)"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+
+```
+
+### Distance
+```{r}
+
+ggplot(novO_data, aes(x = condition, y = distance_no, colour = condition)) +
+  geom_violin(fill = NA, trim = TRUE) +
+  geom_boxplot(width = 0.15, outlier.shape = NA) +
+  geom_point(position = position_jitter(width = 0.12), alpha = 0.5) +
+  scale_y_log10() +
+  facet_wrap(~study_species) +
+  labs(
+    x = "Acclimation condition",
+    y = "distance novel object"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "none")
+  
 ```
 
