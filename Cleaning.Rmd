@@ -165,6 +165,14 @@ kable(counts_long)
 
 ```
 
+Quick recap: Joachim: no subsets prvided yet. Only 10 / 30
+
+Maria: missing full 30, last mins for both 10 and 30 (but has provided 10 and first 10 for 30)
+
+Melissa: Patchy data for the subsets
+
+HELEN : recheck datasets!
+
 ```{r}
 
 with(data, table(condition, trial_day))
@@ -201,7 +209,7 @@ ggplot(sub_last, aes(x = trial_day, y = timespent_active, colour = condition, fi
   theme_minimal(base_size = 13)
 ```
 
-### split by species
+### split by species: LAST minute only
 ```{r}
 ggplot(sub_last, aes(x = trial_day, y = timespent_active, colour = condition)) +
   geom_line(
@@ -227,12 +235,12 @@ ggplot(sub_last, aes(x = trial_day, y = timespent_active, colour = condition)) +
     size = 1.1
   ) +
   facet_wrap(~study_species) +
-  labs(x = "Trial day", y = "Time spent active (s)", colour = "Condition", fill = "Condition") +
+  labs(x = "Trial day", y = "Time spent active (s)", colour = "Condition", fill = "Condition", title = "LAST minute only - active") +
   theme_minimal(base_size = 13)
 
 ```
 
-ok, Danio my fault, need to fix the data!!
+fixed danio
 
 ## 10 mins
 
@@ -263,16 +271,20 @@ ggplot(sub10, aes(x = trial_day, y = timespent_active, colour = condition)) +
     size = 1.1
   ) +
   facet_wrap(~study_species) +
-  labs(x = "Trial day", y = "Time spent active (s)", colour = "Condition", fill = "Condition") +
+  labs(x = "Trial day", y = "Time spent active (s)", colour = "Condition", fill = "Condition", title = "First 10min acitivity") +
   theme_minimal(base_size = 13)
 
 ```
+Neolamprologus = Joachim, DATA NOT COMPLETE YET (i.e. only full 10 / full 30 min available)
 
 
 ### Different variables?
 LATENCY
 ```{r}
-ggplot(sub10, aes(x = trial_day, y = latency_swim_freely, colour = condition)) +
+
+sub_lat <- subset(data, condition %in% c("10", "30", "30f10"))
+
+ggplot(sub_lat, aes(x = trial_day, y = latency_swim_freely, colour = condition)) +
   geom_line(
     aes(group = interaction(individual_id, condition)),
     alpha = 0.12,
@@ -298,8 +310,13 @@ ggplot(sub10, aes(x = trial_day, y = latency_swim_freely, colour = condition)) +
   facet_wrap(~study_species) +
   labs(x = "Trial day", y = "latency to swim (s)", colour = "Condition", fill = "Condition") +
  
-  theme_minimal(base_size = 13) + scale_y_log10()
+  theme_minimal(base_size = 13) +
+  scale_y_log10()
+
 ```
+
+I have added both the full 30 as well as the 30f10 here, as there are some current discrepancies (i.e. Sparus has no "full" 30 datase; for other species i.e. Onchorhynchus & Hucho the latency data are ONLY provided in the full 30 min,NOT the first 10mins )
+
 
 CONTACT WITH SIDES or BOTTOM (called thigmotaxis here)
 ```{r}
@@ -327,71 +344,11 @@ ggplot(sub10, aes(x = trial_day, y =timespent_contact, colour = condition)) +
     size = 1.1
   ) +
   facet_wrap(~study_species) +
-  labs(x = "Trial day", y = "thigmotaxis (s)", colour = "Condition", fill = "Condition") +
+  labs(x = "Trial day", y = "thigmotaxis (s)", colour = "Condition", fill = "Condition", title = "Thigmotaxis, first 10mins") +
   theme_minimal(base_size = 13)
 ```
-ggplot(sub10, aes(x = trial_day, y = timespent_active, colour = condition)) +
-  geom_line(
-    aes(group = interaction(individual_id, condition)),
-    alpha = 0.12,
-    position = position_dodge(width = 0.8)
-  ) +
-  geom_violin(
-    aes(fill = condition),
-    position = position_dodge(width = 0.8),
-    alpha = 0.2,
-    trim = TRUE
-  ) +
-  geom_boxplot(
-    width = 0.15,
-    outlier.shape = NA,
-    position = position_dodge(width = 0.8),
-    alpha = 0.3
-  ) +
-  geom_point(
-    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
-    alpha = 0.4,
-    size = 1.1
-  ) +
-  facet_wrap(~study_species) +
-  labs(x = "Trial day", y = "Time spent active (s)", colour = "Condition", fill = "Condition") +
-  theme_minimal(base_size = 13)
+ Jo's data not available yet. Possible to use overall and average per minute?
 
-```
-
-
-##### Different variables?
-```{r} 
-
-ggplot(sub10, aes(x = trial_day, y = latency_swim_freely, colour = condition)) +
-  geom_line(
-    aes(group = interaction(individual_id, condition)),
-    alpha = 0.12,
-    position = position_dodge(width = 0.8)
-  ) +
-  geom_violin(
-    aes(fill = condition),
-    position = position_dodge(width = 0.8),
-    alpha = 0.2,
-    trim = TRUE
-  ) +
-  geom_boxplot(
-    width = 0.15,
-    outlier.shape = NA,
-    position = position_dodge(width = 0.8),
-    alpha = 0.3
-  ) +
-  geom_point(
-    position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.8),
-    alpha = 0.4,
-    size = 1.1
-  ) +
-  facet_wrap(~study_species) +
-  labs(x = "Trial day", y = "latency to swim (s)", colour = "Condition", fill = "Condition") +
- 
-  theme_minimal(base_size = 13) + scale_y_log10()
-  
-```
 
 
 STARTLE
@@ -422,10 +379,12 @@ ggplot(sub10, aes(x = trial_day, y =nb_dart_startle , colour = condition)) +
     size = 1.1
   ) +
   facet_wrap(~study_species) +
-  labs(x = "Trial day", y = "number startle/darts", colour = "Condition", fill = "Condition") +
+  labs(x = "Trial day", y = "number startle/darts", colour = "Condition", fill = "Condition", title = "startle/darts") +
   theme_minimal(base_size = 13)
   
 ```
+Not relevant for most species. Day 1 should be same for Danio - fish used in 30 min condition not bothered???
+At least the 10min fish show decline over time, as would be expected.
 
 
 ## Novel Object Tests
@@ -451,6 +410,8 @@ ggplot(novO_data, aes(x = condition, y = latency_approach_no, colour = condition
   theme(legend.position = "none")
 
 ```
+Sparus/Maria: day 4 so far only available for 10min acclimation
+
 
 ### Latency touch
 ```{r}
@@ -469,8 +430,11 @@ ggplot(novO_data, aes(x = condition, y = latency_touch_no, colour = condition)) 
   theme(legend.position = "none")
 
 ```
+Neoplamprologus: NO touch in 10min condition, only 2 in 30
 
 ### Distance
+
+Only use as covariate  - that's fish release distance from novel object, not behaviour
 ```{r}
 
 ggplot(novO_data, aes(x = condition, y = distance_no, colour = condition)) +
