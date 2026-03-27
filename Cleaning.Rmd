@@ -30,6 +30,13 @@ load_pkg("knitr")
 
 ```
 
+## Precleaning in EXCEL
+
+- adjustment of . vs , for numbers, captial letters vs small.
+- fixed copy/paste error for SZajitschek data
+- Libor's data: 30f10 had N/As for "latency" - I copied the values from the full 30 conditions, as that should be identical
+- Helen's data: newly merged what was in google sheet and in separately submitted file; separation / re-coding of conditions (10|1, 30|1, 30f10). PROBLEM: when merging, it appears that original 10 and 30 conditions were analysed again, however with slightly different results. As this isn't mere duplication I have left those duplicated values in there (may give some interesting insight on differences when re-coring same videos?), but called these with less information 10|b and 30|b respectively (these conditions will be ignored in the analyses in comparison across species, but could be called separately specifically to compare outcomes for the double-scorong!)
+
 ## Import data
 
 ```{r}
@@ -56,13 +63,13 @@ str(data)
 data <- data %>% mutate(across(everything(), ~ ifelse(. %in% c("N/A", "-", ""), NA, .)))
 
 # checking for duplicate rows
-sum(duplicated(data)) # 2 not so bad, probably happended when copying over. remove:
-data <- data %>% distinct()
+sum(duplicated(data)) # none
+
 
 # as per structure, many variable are character but should be either numeric or factors
 # converting to factors:
   
-factor_vars <- c("individual_id", "sex", "age", "origin", "strain", "condition", "trial_day", "background_colour", "housing_s", "housing_social")
+factor_vars <- c("study_species", "individual_id", "sex", "age", "origin", "strain", "condition", "trial_day", "background_colour", "housing_s", "housing_social")
 
 data <- data %>%
   mutate(across(all_of(factor_vars), as.factor))
@@ -83,13 +90,14 @@ summary(data)
 
 ```{r}
 
-data %>% count(study_species) %>%
+data %>% filter(trial_day == 1, condition == 10) %>%
+  count(study_species) %>%
   ggplot(aes(x = study_species, y = n, fill= study_species)) +
   geom_col() +
-  labs(title="Count by Species", x="Species", y="Count")
+  labs(title="Sample sizes by Species", x="Species", y="Count")
 
 ```
-Good spread! :-)
+This time restricted to Day one and one condition, as we have duplicated rows. This shows numbers of individuals per species.
 
 ## assessing condions
 ```{r}
@@ -169,9 +177,9 @@ Quick recap: Joachim: no subsets prvided yet. Only 10 / 30
 
 Maria: missing full 30, last mins for both 10 and 30 (but has provided 10 and first 10 for 30)
 
-Melissa: Patchy data for the subsets
+Melissa: Patchy data for the subsets. Video problems (?)
 
-HELEN : recheck datasets!
+Helen: duplicated data, hope to have taken care of that.
 
 ```{r}
 
@@ -180,7 +188,7 @@ with(data, table(condition, trial_day))
    
 ```
 
-regardless...
+
 
 let's have a quick look at conditions (last min 10 vs 30)
 
@@ -240,7 +248,6 @@ ggplot(sub_last, aes(x = trial_day, y = timespent_active, colour = condition)) +
 
 ```
 
-fixed danio
 
 ## 10 mins
 
@@ -282,7 +289,7 @@ Neolamprologus = Joachim, DATA NOT COMPLETE YET (i.e. only full 10 / full 30 min
 LATENCY
 ```{r}
 
-sub_lat <- subset(data, condition %in% c("10", "30", "30f10"))
+sub_lat <- subset(data, condition %in% c("10", "30f10"))
 
 ggplot(sub_lat, aes(x = trial_day, y = latency_swim_freely, colour = condition)) +
   geom_line(
@@ -315,7 +322,7 @@ ggplot(sub_lat, aes(x = trial_day, y = latency_swim_freely, colour = condition))
 
 ```
 
-I have added both the full 30 as well as the 30f10 here, as there are some current discrepancies (i.e. Sparus has no "full" 30 datase; for other species i.e. Onchorhynchus & Hucho the latency data are ONLY provided in the full 30 min,NOT the first 10mins )
+
 
 
 CONTACT WITH SIDES or BOTTOM (called thigmotaxis here)
@@ -383,8 +390,9 @@ ggplot(sub10, aes(x = trial_day, y =nb_dart_startle , colour = condition)) +
   theme_minimal(base_size = 13)
   
 ```
-Not relevant for most species. Day 1 should be same for Danio - fish used in 30 min condition not bothered???
-At least the 10min fish show decline over time, as would be expected.
+Not relevant for most species. Day 1 should be same for Danio - fish used in 30 min condition not bothered. 
+Experimental issue: Fish kept in communal lab, experiments done in separate temporal blocks - 10 min trials happened at very busy time! 30min trials: 2 weeks later, much calmer.
+
 
 
 ## Novel Object Tests
