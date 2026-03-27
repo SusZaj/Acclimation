@@ -26,7 +26,7 @@ load_pkg("janitor")
 load_pkg("here")
 load_pkg("ggpubr")
 load_pkg("knitr")
-
+load_pkg("writexl")
 
 ```
 
@@ -186,6 +186,13 @@ Helen: duplicated data, hope to have taken care of that.
 with(data, table(condition, trial_day))
      
    
+```
+save cleaned up datafile
+```{r}
+
+
+# write_xlsx(data, "data_cleanApril2026.xlsx")
+
 ```
 
 
